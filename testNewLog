@@ -1,0 +1,10 @@
+#!/bin/bash
+
+count=$1
+[ $count = "" ] && count = 3
+redis-cli -h 192.168.178.34 -a junk.Cray.tide.ergo4:vest.ashy.shot.Audi6 keys NewL* 2>&1 | sed 's/.*://' | sort -h | tail -$count | while read epoch
+do
+    echo NewLog:$epoch
+    redis-cli -h 192.168.178.34 -a junk.Cray.tide.ergo4:vest.ashy.shot.Audi6 hgetall NewLog:$epoch
+done
+
