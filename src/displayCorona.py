@@ -3,15 +3,9 @@ import sys
 import time
 import os
 import configparser
-picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
-libdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'lib')
-if os.path.exists(libdir):
-    sys.path.append(libdir)
+from tkinter import *
 
 import logging
-from waveshare_epd import epd2in13
-from PIL import Image,ImageDraw,ImageFont
-import traceback
 
 def getConfig():
     configParser = configparser.RawConfigParser()   
@@ -71,55 +65,48 @@ logging.basicConfig(level=logging.DEBUG)
 
 ################### M A I N ##########################################################################################
 try:
-    logging.info("epd2in13 Demo")
+    logging.info("tkinter Demo - open redis")
 
     configParser = getConfig()
     rhost = configParser.get('redis', 'rhost')
     password = configParser.get('redis', 'password')
-    epd = epd2in13.EPD()
-    epd.init(epd.lut_full_update)
-    font15 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 15)
-    font24 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 24)
+    rhost = redis.Redis(host=rhost, port=6379, db=0, password=password)
     
     # # partial update
     logging.info("Start the show ...")
 
-    rhost = redis.Redis(host=rhost, port=6379, db=0, password=password)
+    root = Tk()
+    var = StringVar()
+    label = Label(root, textvariable = var, relief = RAISED, anchor='w', justify = 'left' )
+    label.pack()
+
     while True:
         
-        stats_image = Image.new('1', (epd.height, epd.width), 255)
-        stats_draw = ImageDraw.Draw(stats_image)
-
         # Get the values for the world:
         worldinfected, worldinfecnew, worlddeceased, worlddeceanew = getWorld(rhost)
-        logging.info('World: ' + worldinfected + ' - ' + worldinfecnew + ' - ' + worlddeceased + ' - ' + worlddeceanew)
+        worldInfo = 'World: ' + worldinfected + ' - ' + worldinfecnew + ' - ' + worlddeceased + ' - ' + worlddeceanew
+        logging.info(worldInfo)
 
-        # Output the values for the world:
-        stats_draw.text((0, 5), 'World', font = font15, fill = 0)
-        stats_draw.text((0, 21), worldinfected, font = font15, fill = 0)
-        stats_draw.text((70, 21), worldinfecnew, font = font15, fill = 0)
-        stats_draw.text((140, 21), worlddeceased, font = font15, fill = 0)
-        stats_draw.text((200, 21), worlddeceanew, font = font15, fill = 0)
-    
         # Get the values for the countries which where last updated:
         countrystats  = getItem(rhost)
         counter = 0
+        countryInfo = ''
         for countries in countrystats.keys():
             logging.info('Country: ' + countries.decode('UTF-8'))
             country = countries.decode('UTF-8')
             infected, infecnew, deceased, deceanew = countrystats.get(countries)
             logging.info ('Values: ' + infected + ' - ' + infecnew + ' - ' + deceased + ' - ' + deceanew)
-
-            stats_draw.text((0, 39 + counter * 15), country, font = font15, fill = 0)
-            stats_draw.text((70, 39 + counter * 15), infected, font = font15, fill = 0)
-            stats_draw.text((130, 39 + counter * 15), infecnew, font = font15, fill = 0)
-            stats_draw.text((180, 39 + counter * 15), deceased, font = font15, fill = 0)
-            stats_draw.text((220, 39 + counter * 15), deceanew, font = font15, fill = 0)
+#             countryInfo = countryInfo + '\n' + country + ': ' + infected + ' - ' + infecnew + ' - ' + deceased + ' - ' + deceanew
+            countryInfo = country + ': ' + infected + ' - ' + infecnew + ' - ' + deceased + ' - ' + deceanew
 
             counter += 1
     
-        epd.display(epd.getbuffer(stats_image))
-        time.sleep(300)
+        # Output the values:
+        logging.info('Count of Countries: ' + str(counter))
+        var.set(worldInfo + "\n" + countryInfo)
+        root.update_idletasks()
+
+        time.sleep(2)
 
 except IOError as e:
     logging.info(e)
