@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import redis                                                                                                                                                                                     
 import sys
 import time
@@ -45,19 +47,22 @@ def getItem(rhost):
     for i in items:
         numbers.append (int(i.decode('UTF-8').partition(':')[2]))
     numbers.sort(reverse=True)
-    high = numbers[0]
+    high = [numbers[0], numbers[1], numbers[2]]
+    logging.info('NewLog:' + str(high[0]))
 
-    # Then get the entry of the last update:
-    newlog = rhost.hgetall('NewLog:' + str(high))
-    
-    # And the entries for each country updated:
+    # Then get the entry of the last updates:
+
     countries =  {}
-    for country, item in newlog.items():
-        country = country[:7]
-        item = item.decode('UTF-8')
-        values = item.split(':')
-        infected, infecnew, deceased, deceanew = getVals(values)
-        countries[country] = infected, infecnew, deceased, deceanew
+    newlog = [rhost.hgetall('NewLog:' + str(high[0])), rhost.hgetall('NewLog:' + str(high[1])), rhost.hgetall('NewLog:' + str(high[2]))]
+    
+    for log in newlog:
+        # And the entries for each country updated:
+        for country, item in log.items():
+            country = country[:9]
+            item = item.decode('UTF-8')
+            values = item.split(':')
+            infected, infecnew, deceased, deceanew = getVals(values)
+            countries[country] = infected, infecnew, deceased, deceanew
 
     return countries
 
@@ -78,32 +83,32 @@ try:
     root = Tk()
     var = StringVar()
     label = Label(root, textvariable = var, relief = RAISED, anchor='w', justify = 'left' )
+    label.config(font=("Courier", 24))
     label.pack()
 
     while True:
         
         # Get the values for the world:
         worldinfected, worldinfecnew, worlddeceased, worlddeceanew = getWorld(rhost)
-        worldInfo = 'World: ' + worldinfected + ' - ' + worldinfecnew + ' - ' + worlddeceased + ' - ' + worlddeceanew
+        worldInfo = 'World: ' + worldinfected + '  ' + worldinfecnew + ' - ' + worlddeceased + '  ' + worlddeceanew
         logging.info(worldInfo)
 
         # Get the values for the countries which where last updated:
         countrystats  = getItem(rhost)
-        counter = 0
+        logging.info('Count of Countries: ' + str(len(countrystats)))
         countryInfo = ''
-        for countries in countrystats.keys():
+        for countries in countrystats:
             logging.info('Country: ' + countries.decode('UTF-8'))
             country = countries.decode('UTF-8')
             infected, infecnew, deceased, deceanew = countrystats.get(countries)
-            logging.info ('Values: ' + infected + ' - ' + infecnew + ' - ' + deceased + ' - ' + deceanew)
-#             countryInfo = countryInfo + '\n' + country + ': ' + infected + ' - ' + infecnew + ' - ' + deceased + ' - ' + deceanew
-            countryInfo = country + ': ' + infected + ' - ' + infecnew + ' - ' + deceased + ' - ' + deceanew
+            logging.info ('Values: ' + infected + '  ' + infecnew + ' - ' + deceased + '  ' + deceanew)
+            countryInfo = countryInfo + '\n' + country + ': ' + infected + ' - ' + infecnew + ' - ' + deceased + ' - ' + deceanew
+#             countryInfo = country + ': ' + infected + '  ' + infecnew + ' - ' + deceased + '  ' + deceanew
 
-            counter += 1
-    
         # Output the values:
-        logging.info('Count of Countries: ' + str(counter))
-        var.set(worldInfo + "\n" + countryInfo)
+        logging.info ('countryInfo: ' + countryInfo)
+        output = worldInfo + "\n" + countryInfo
+        var.set(output)
         root.update_idletasks()
 
         time.sleep(2)
@@ -112,7 +117,7 @@ except IOError as e:
     logging.info(e)
 
 except KeyboardInterrupt:
-    logging.info("ctrl + c:")
-    epd2in13.epdconfig.module_exit()
+#     logging.info("ctrl + c:")
+#     epd2in13.epdconfig.module_exit()
     exit()
 
